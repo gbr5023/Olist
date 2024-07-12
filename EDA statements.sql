@@ -82,6 +82,83 @@ group by 1
 order by 2 desc;
 
 -- What are the most popular product categories? most lucrative product categories? Is there an overlap?
-- Do Olist sellers specialize in specific product categories or a variety?
-- Are there sellers that dominate specific product categories (market share)?
-- Which sellers are making the most money?
+select 
+	pc.category_name,
+	pc.category_name_en,
+	count(distinct oi.order_id),
+	sum(oi.product_price)
+from order_item oi
+inner join product prod
+	on oi.product_id = prod.product_id
+inner join product_category pc
+	on prod.category_name = pc.category_name
+group by 1,2
+order by 4 desc; --swap out 3 for 4 to check popular vs lucrative
+
+with popularity_ranks as (
+	select 
+	pc.category_name_en,
+	rank() over(order by count (distinct oi.order_id) desc) as pop_ranking,
+	rank() over(order by sum(oi.product_price) desc) as rev_ranks
+--	count(distinct oi.order_id) as order_cnt
+	from order_item oi
+	inner join product prod
+		on oi.product_id = prod.product_id
+	inner join product_category pc
+		on prod.category_name = pc.category_name
+	group by 1
+), rev_ranks as (
+	select 
+	rank() over(order by sum (oi.product_price) desc) as rev_ranks,
+	pc.category_name_en,
+	sum(oi.product_price)
+	from order_item oi
+	inner join product prod
+		on oi.product_id = prod.product_id
+	inner join product_category pc
+		on prod.category_name = pc.category_name
+	group by 2
+order by 4 desc
+)
+
+	
+/*
+Most Popular
+"bed_bath_table"	9272
+"health_beauty"	8647
+"sports_leisure"	7529
+"computers_accessories"	6529
+"furniture_decor"	6307
+"housewares"	5743
+"watches_gifts"	5493
+"telephone "	4093
+"auto"	3809
+"toys"	3803
+
+Most Lucrative
+"health_beauty"		1233131.72
+"watches_gifts"		1165898.98
+"bed_bath_table"	1023434.76
+"sports_leisure"	954673.55
+"computers_accessories"		888613.62
+"furniture_decor"	711927.69
+"housewares"	615628.69
+"cool_stuff"	610204.10
+"auto"	578849.35
+"toys"	471097.49
+
+Save for telephone products/services there is overlap of the top 10 categories sold/offered by Olist sellers
+"bed_bath_table"		1	3
+"health_beauty"			2	1
+"sports_leisure"		3	4
+"computers_accessories"	4	5
+"furniture_decor"		5	6
+"housewares"			6	7
+"watches_gifts"			7	2
+"telephone "			8	14
+"auto"					9	9
+"toys"					10	10
+*/
+-- Do Olist sellers specialize in specific product categories or a variety?
+-- Are there sellers that dominate specific product categories (market share)?
+-- Which sellers are making the most money?

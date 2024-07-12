@@ -1,13 +1,13 @@
 /* Created tables for reference
 select * from customer limit 10;
 select * from geolocation limit 10;
-select * from orders limit 10;
-select * from order_item limit 10;
-select * from product_category limit 10;
-select * from product limit 10;
-select * from seller limit 10;
-select * from review limit 10;
 select * from geolocation_state;
+select * from order_item limit 10;
+select * from orders limit 10;
+select * from product limit 10;
+select * from product_category limit 10;
+select * from review limit 10;
+select * from seller limit 10;
 */
 
 /*
@@ -75,6 +75,11 @@ from orders;
 select count(*)
 from orders
 where order_cust_delivery_dtm is NULL; -- 2,965 orders to delete
+
+select *
+from orders
+where order_cust_delivery_dtm is NULL
+order by order_status asc; 
 
 delete from orders
 where order_cust_delivery_dtm is NULL;
