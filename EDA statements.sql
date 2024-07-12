@@ -95,31 +95,18 @@ inner join product_category pc
 group by 1,2
 order by 4 desc; --swap out 3 for 4 to check popular vs lucrative
 
-with popularity_ranks as (
-	select 
-	pc.category_name_en,
-	rank() over(order by count (distinct oi.order_id) desc) as pop_ranking,
-	rank() over(order by sum(oi.product_price) desc) as rev_ranks
+select 
+pc.category_name_en,
+rank() over(order by count (distinct oi.order_id) desc) as pop_ranking,
+rank() over(order by sum(oi.product_price) desc) as rev_ranks
 --	count(distinct oi.order_id) as order_cnt
-	from order_item oi
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category pc
-		on prod.category_name = pc.category_name
-	group by 1
-), rev_ranks as (
-	select 
-	rank() over(order by sum (oi.product_price) desc) as rev_ranks,
-	pc.category_name_en,
-	sum(oi.product_price)
-	from order_item oi
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category pc
-		on prod.category_name = pc.category_name
-	group by 2
-order by 4 desc
-)
+from order_item oi
+inner join product prod
+	on oi.product_id = prod.product_id
+inner join product_category pc
+	on prod.category_name = pc.category_name
+group by 1
+;
 
 	
 /*
@@ -159,6 +146,42 @@ Save for telephone products/services there is overlap of the top 10 categories s
 "auto"					9	9
 "toys"					10	10
 */
+
 -- Do Olist sellers specialize in specific product categories or a variety?
+select oi.seller_id,
+	count(distinct prod.category_name),
+	count(distinct oi.product_id)
+from order_item oi
+inner join product prod
+	on oi.product_id = prod.product_id
+inner join product_category prodcat
+	on prod.category_name = prodcat.category_name
+group by 1
+order by 3 desc;
+
+select prodcat.category_name_en,
+	count(distinct oi.seller_id)
+from product_category prodcat
+inner join product prod
+	on prodcat.category_name = prod.category_name
+inner join order_item oi
+	on prod.product_id = oi.product_id
+group by 1
+order by 2 desc;
+
+select 
+	pc.category_name_en,
+	rank() over(order by count (distinct oi.order_id) desc) as pop_ranking,
+	rank() over(order by sum(oi.product_price) desc) as rev_ranks,
+	rank
+--	count(distinct oi.order_id) as order_cnt
+from order_item oi
+inner join product prod
+	on oi.product_id = prod.product_id
+inner join product_category pc
+	on prod.category_name = pc.category_name
+group by 1
+;
+
 -- Are there sellers that dominate specific product categories (market share)?
 -- Which sellers are making the most money?
