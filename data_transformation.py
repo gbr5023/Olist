@@ -21,9 +21,9 @@ from sklearn.model_selection import train_test_split
            1.1 Classes
 -----------------------------------
 """
-
+"""
 class ColumnMapping(BaseEstimator, TransformerMixin):
-    """
+    
     This class applies the map() function into a DataFrame for transforming a columns given a mapping dictionary
 
     Parameters
@@ -42,7 +42,7 @@ class ColumnMapping(BaseEstimator, TransformerMixin):
     # Transforming a DataFrame column given a mapping dictionary
     mapper = ColumnMapping(old_col_name='col_1', mapping_dict=dictionary, new_col_name='col_2', drop=True)
     df_mapped = mapper.fit_transform(df)
-    """
+    
 
     def __init__(self, old_col_name, mapping_dict, new_col_name='target', drop=True):
         self.old_col_name = old_col_name
@@ -65,7 +65,7 @@ class ColumnMapping(BaseEstimator, TransformerMixin):
 
 
 def import_data(path, sep=',', optimized=True, n_lines=50, encoding='utf-8', usecols=None, verbose=True):
-    """
+    
     This functions applies a csv reading in an optimized way, converting data types (float64 to float32 and
     int 64 to int32), reducing script memory usage.
 
@@ -87,7 +87,7 @@ def import_data(path, sep=',', optimized=True, n_lines=50, encoding='utf-8', use
     -----------
     # Reading the data and applying a data type conversion for optimizing the memory usage
     df = import_data(filepath, optimized=True, n_lines=100)
-    """
+    
 
     # Validating the optimized flag for optimizing memory usage
     if optimized:
@@ -140,7 +140,7 @@ def import_data(path, sep=',', optimized=True, n_lines=50, encoding='utf-8', use
 
 
 def split_cat_num_data(df):
-    """
+    
     This functions receives a DataFrame object and extracts numerical and categorical features from it
 
     Parameters
@@ -155,7 +155,7 @@ def split_cat_num_data(df):
     -----------
     # Extracting numerical and categorical features for a given DataFrame
     num_cols, cat_cols = split_cat_num_data(df)
-    """
+    
 
     # Splitting data attributes by data type
     num_attribs = [col for col, dtype in df.dtypes.items() if dtype != 'object']
@@ -165,7 +165,7 @@ def split_cat_num_data(df):
 
 
 def calc_working_days(date_series1, date_series2, convert=True):
-    """
+    
     This functions receives two date series as args and calculates the working days between each of its rows.
 
     Parameters
@@ -182,7 +182,7 @@ def calc_working_days(date_series1, date_series2, convert=True):
     -----------
     # Calculating the working days between two date series
     working_days = calc_working_days(df['purchase_date'], df['delivered_date'], convert=True)
-    """
+    
 
     # Auxiliar function for threating exceptions during the np.busday_count() function
     def handle_working_day_calc(d1, d2):
@@ -204,7 +204,7 @@ def calc_working_days(date_series1, date_series2, convert=True):
 
 
 def indices_of_top_k(arr, k):
-    """
+    
     This function selects the top k entries in an array based on its indices
 
     Parameters
@@ -219,20 +219,20 @@ def indices_of_top_k(arr, k):
     Application
     -----------
 
-    """
+    
     return np.sort(np.argpartition(np.array(arr), -k)[-k:])
 
 
-"""
+
 -----------------------------------
 ----- 2. CUSTOM TRANSFORMERS ------
    2.1 Pre Processing Pipelines
 -----------------------------------
-"""
+
 
 
 class ColsFormatting(BaseEstimator, TransformerMixin):
-    """
+    
     This class applies lower(), strip() and replace() method on a pandas DataFrame object.
     It's not necessary to pass anything as args.
 
@@ -244,7 +244,7 @@ class ColsFormatting(BaseEstimator, TransformerMixin):
     -----------
     cols_formatter = ColsFormatting()
     df_custom = cols_formatter.fit_transform(df_old)
-    """
+    
 
     def fit(self, df, y=None):
         return self
@@ -255,7 +255,7 @@ class ColsFormatting(BaseEstimator, TransformerMixin):
 
 
 class FeatureSelection(BaseEstimator, TransformerMixin):
-    """
+    
     This class filters a dataset based on a set of features passed as argument.
 
     Parameters
@@ -270,7 +270,7 @@ class FeatureSelection(BaseEstimator, TransformerMixin):
     -----------
     selector = FeatureSelection(features=model_features)
     df_filtered = selector.fit_transform(df)
-    """
+    
 
     def __init__(self, features):
         self.features = features
@@ -283,7 +283,7 @@ class FeatureSelection(BaseEstimator, TransformerMixin):
 
 
 class TargetDefinition(BaseEstimator, TransformerMixin):
-    """
+    
     This class transform a categorical target column into a numerical one base on a positive_class
 
     Parameters
@@ -300,7 +300,7 @@ class TargetDefinition(BaseEstimator, TransformerMixin):
     -----------
     target_prep = TargetDefinition(target_col='class_target', pos_class='Some Category', new_target_name='target')
     df = target_prep.fit_transform(df)
-    """
+    
 
     def __init__(self, target_col, pos_class, new_target_name='target'):
         self.target_col = target_col
@@ -324,7 +324,7 @@ class TargetDefinition(BaseEstimator, TransformerMixin):
 
 
 class DropDuplicates(BaseEstimator, TransformerMixin):
-    """
+    
     This class filters a dataset based on a set of features passed as argument.
     It's not necessary to pass anything as args.
 
@@ -336,7 +336,7 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
     -----------
     dup_dropper = DropDuplicates()
     df_nodup = dup_dropper.fit_transform(df)
-    """
+    
 
     def fit(self, df, y=None):
         return self
@@ -346,7 +346,7 @@ class DropDuplicates(BaseEstimator, TransformerMixin):
 
 
 class SplitData(BaseEstimator, TransformerMixin):
-    """
+    
     This class helps splitting data into training and testing and it can be used at the end of a pre_processing pipe.
     In practice, the class applies the train_test_split() function from sklearn.model_selection module.
 
@@ -371,7 +371,7 @@ class SplitData(BaseEstimator, TransformerMixin):
     -----------
     splitter = SplitData(target='target')
     X_train, X_test, y_train, y_test = splitter.fit_transform(df)
-    """
+    
 
     def __init__(self, target, test_size=.20, random_state=42):
         self.target = target
@@ -389,16 +389,16 @@ class SplitData(BaseEstimator, TransformerMixin):
         return train_test_split(self.X_, self.y_, test_size=self.test_size, random_state=self.random_state)
 
 
-"""
+
 -----------------------------------
 ----- 2. CUSTOM TRANSFORMERS ------
     2.2 Preparation Pipelines
 -----------------------------------
-"""
+
 
 
 class DummiesEncoding(BaseEstimator, TransformerMixin):
-    """
+    
     This class applies the encoding on categorical data using pandas get_dummies() method. It also retrieves the
     features after the encoding so it can be used further on the script
 
@@ -414,7 +414,7 @@ class DummiesEncoding(BaseEstimator, TransformerMixin):
     -----------
     encoder = DummiesEncoding(dummy_na=True)
     X_encoded = encoder.fit_transform(df[cat_features])
-    """
+    
 
     def __init__(self, dummy_na=True):
         self.dummy_na = dummy_na
@@ -441,7 +441,7 @@ class DummiesEncoding(BaseEstimator, TransformerMixin):
 
 
 class FillNullData(BaseEstimator, TransformerMixin):
-    """
+    
     This class fills null data. It's possible to select just some attributes to be filled with different values
 
     Parameters
@@ -457,7 +457,7 @@ class FillNullData(BaseEstimator, TransformerMixin):
     -----------
     filler = FillNullData(cols_to_fill=['colA', 'colB', 'colC'], value_fill=-999)
     X_filled = filler.fit_transform(X)
-    """
+    
 
     def __init__(self, cols_to_fill=None, value_fill=0):
         self.cols_to_fill = cols_to_fill
@@ -476,7 +476,7 @@ class FillNullData(BaseEstimator, TransformerMixin):
 
 
 class DropNullData(BaseEstimator, TransformerMixin):
-    """
+    
     This class drops null data. It's possible to select just some attributes to be filled with different values
 
     Parameters
@@ -491,7 +491,7 @@ class DropNullData(BaseEstimator, TransformerMixin):
     -----------
     null_dropper = DropNulldata(cols_to_fill=['colA', 'colB', 'colC'], value_fill=-999)
     X = null_dropper.fit_transform(X)
-    """
+    
 
     def __init__(self, cols_dropna=None):
         self.cols_dropna = cols_dropna
@@ -509,7 +509,7 @@ class DropNullData(BaseEstimator, TransformerMixin):
 
 
 class TopFeatureSelector(BaseEstimator, TransformerMixin):
-    """
+    
     This class selects the top k most important features from a trained model
 
     Parameters
@@ -525,7 +525,7 @@ class TopFeatureSelector(BaseEstimator, TransformerMixin):
     -----------
     feature_selector = TopFeatureSelector(feature_importance, k=10)
     X_selected = feature_selector.fit_transform(X)
-    """
+    
 
     def __init__(self, feature_importance, k):
         self.feature_importance = feature_importance
@@ -536,3 +536,5 @@ class TopFeatureSelector(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         return X[:, indices_of_top_k(self.feature_importance, self.k)]
+    
+"""

@@ -4,16 +4,13 @@
 """
 
 import re
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import RSLPStemmer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+#from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.base import BaseEstimator, TransformerMixin
 
-"""
---------------------------------------------
----------- 1. FUNÇÕES PARA REGEX -----------
---------------------------------------------
-"""
+# PYTHON REGEX FUNCTIONS
 
 # [RegEx] Padrão para encontrar quebra de linha e retorno de carro (\n ou \r)
 def re_breakline(text_list, text_sub=' '):
@@ -282,17 +279,17 @@ class TextFeatureExtraction(BaseEstimator, TransformerMixin):
 --------------------------------------------
 --- 7. UTILITIES FOR SENTIMENT ANALYSIS ----
 --------------------------------------------
-"""
+
 
 # Defining a function to plot the sentiment of a given phrase
 def sentiment_analysis(text, pipeline, vectorizer, model):
-    """
+    
     Args
     -----------
     text: text string / phrase / review comment to be analysed [type: string]
     pipeline: text prep pipeline built for preparing the corpus [type: sklearn.Pipeline]
     model: classification model trained to recognize positive and negative sentiment [type: model]
-    """
+    
 
     # Applying the pipeline
     if type(text) is not list:
@@ -319,3 +316,5 @@ def sentiment_analysis(text, pipeline, vectorizer, model):
     ax.axis('off')
     ax.set_title('Sentiment Analysis', fontsize=14)
     plt.show()
+    
+"""

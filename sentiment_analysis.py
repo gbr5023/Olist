@@ -5,13 +5,14 @@
 
 import numpy as np
 import pandas as pd
-import sqlalchemy as db
-from postgresql_connection import get_review
-from data_transformation import ColumnMapping
+#import sqlalchemy as db
+from postgresql_connection import db_connect
 from util_text_process import re_breakline, re_dates, re_hiperlinks, re_money, re_negation, re_numbers, \
     re_special_chars, re_whitespaces, ApplyRegex, StemmingProcess, StopWordsRemoval
-from nltk.corpus import stopwords
+import nltk
+nltk.download('stopwords')
 from nltk.stem import RSLPStemmer
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -35,7 +36,7 @@ CORPUS_COL = 'review_message'
 TARGET_COL = 'target'
 
 # Defining stopwords
-BR_PRT_STOPWORDS = stopwords.words('portuguese')
+BR_PRT_STOPWORDS = nltk.corpus.stopwords.words('portuguese')
 
 # Variables for saving data
 METRICS_FILEPATH = 'metrics/model_performance.csv' # Take a look at your project structure
@@ -43,30 +44,8 @@ METRICS_FILEPATH = 'metrics/model_performance.csv' # Take a look at your project
 # Variables for retrieving model
 MODEL_KEY = 'LogisticRegression'
 
-# Return DB credentials
-def cred():
-    d = dict()
-    d['dbapi'] = input("Enter dialect+driver: ")
-    d['username'] = input("Enter username: ")
-    d['password'] = input("Enter password: ")
-    d['host'] = input("Enter host: ")
-    d['database'] = input("Enter database: ")
-    
-    return d
+connection = db_connect()
 
-d = cred()
-
-url_object = db.URL.create(
-    "postgresql",
-    username = d['username'],
-    password = d['password'],
-    host = d['host'],
-    database = d['database']
-)
-
-connection = db.create_engine(url_object).connect()
-
-# Load Tables
 customer = pd.read_sql_table('customer', connection)
 geolocation = pd.read_sql_table('geolocation', connection)
 geolocation_state = pd.read_sql_table('geolocation_state', connection)
@@ -77,6 +56,46 @@ product_category = pd.read_sql_table('product_category', connection)
 review = pd.read_sql_table('review', connection)
 seller = pd.read_sql_table('seller', connection)
 
+class ColumnMapping(BaseEstimator, TransformerMixin):
+    """
+    This class applies the map() function into a DataFrame for transforming a columns given a mapping dictionary
+
+    Parameters
+    ----------
+    :param old_col_name: name of the columns where mapping will be applied [type: string]
+    :param mapping_dict: python dictionary with key/value mapping [type: dict]
+    :param new_col_name: name of the new column resulted by mapping [type: string, default: 'target]
+    :param drop: flag that guides the dropping of the old_target_name column [type: bool, default: True]
+
+    Returns
+    -------
+    :return X: pandas DataFrame object after mapping application [type: pd.DataFrame]
+
+    Application
+    -----------
+    # Transforming a DataFrame column given a mapping dictionary
+    mapper = ColumnMapping(old_col_name='col_1', mapping_dict=dictionary, new_col_name='col_2', drop=True)
+    df_mapped = mapper.fit_transform(df)
+    """
+
+    def __init__(self, old_col_name, mapping_dict, new_col_name='target', drop=True):
+        self.old_col_name = old_col_name
+        self.mapping_dict = mapping_dict
+        self.new_col_name = new_col_name
+        self.drop = drop
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        # Applying mapping
+        X[self.new_col_name] = X[self.old_col_name].map(self.mapping_dict)
+
+        # Dropping the old columns (if applicable)
+        if self.drop:
+            X.drop(self.old_col_name, axis=1, inplace=True)
+
+        return X
 
 """
 -----------------------------------
@@ -87,20 +106,12 @@ seller = pd.read_sql_table('seller', connection)
 
 # Creating a dictionary for mapping the target column based on review score
 # FIXCODE
-score_map = {
-    1: 0,
-    2: 0,
-    3: 0,
-    4: 1,
-    5: 1
-}
+score_mapper = { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1 }
 
 # Creating a pipeline for the initial prep on the data
 # FIXCODE
 initial_df_pl = Pipeline([
-    ('mapper', ColumnMapping(old_col_name='review_score', mapping_dict=score_map, new_col_name=TARGET_COL))#,
-    #('null_dropper', DropNullData()),
-    #('dup_dropper', DropDuplicates())
+    ('mapper', ColumnMapping(old_col_name='review_score', mapping_dict=score_mapper, new_col_name=TARGET_COL))
 ])
 
 # Applying initial prep pipeline

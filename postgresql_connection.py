@@ -58,42 +58,24 @@ class Connection:
     def get_seller(self):
         return self._seller
 """
-# Return DB credentials
-def cred():
+
+def db_connect():
+    # Return DB credentials
     d = dict()
     d['dbapi'] = input("Enter dialect+driver: ")
     d['username'] = input("Enter username: ")
     d['password'] = input("Enter password: ")
     d['host'] = input("Enter host: ")
     d['database'] = input("Enter database: ")
+
+    url_object = db.URL.create(
+        "postgresql",
+        username = d['username'],
+        password = d['password'],
+        host = d['host'],
+        database = d['database']
+    )
+        
+    connection = db.create_engine(url_object).connect()
     
-    return d
-
-d = cred()
-
-url_object = db.URL.create(
-    "postgresql",
-    username = d['username'],
-    password = d['password'],
-    host = d['host'],
-    database = d['database']
-)
-
-connection = db.create_engine(url_object).connect()
-#engine = db.create_engine("postgresql://postgres:021818@localhost/postgres")
-#conn = engine.connect()
-#metadata = db.MetaData()
-
-# Load Tables
-customer = pd.read_sql_table('customer', connection)
-geolocation = pd.read_sql_table('geolocation', connection)
-geolocation_state = pd.read_sql_table('geolocation_state', connection)
-order_item = pd.read_sql_table('order_item', connection)
-orders = pd.read_sql_table('orders', connection)
-product = pd.read_sql_table('product', connection)
-product_category = pd.read_sql_table('product_category', connection)
-review = pd.read_sql_table('review', connection)
-seller = pd.read_sql_table('seller', connection)
-
-def get_review():
-    return review
+    return connection

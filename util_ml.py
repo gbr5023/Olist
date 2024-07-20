@@ -231,9 +231,8 @@ class BinaryClassifiersAnalysis:
 
             # Validating if the model was already trained (the key 'train_performance' will be at model_info dict if so)
             if 'train_performance' in model_info.keys():
-                
                 df_performances = pd.concat([df_performances, model_info['train_performance']])
-                df_performances = pd.concat(df_performances, model_info['test_performance'])
+                df_performances = pd.concat([df_performances, model_info['test_performance']])
                 continue
 
             # Returning the estimator for calling the evaluation functions
@@ -249,8 +248,10 @@ class BinaryClassifiersAnalysis:
             self.classifiers_info[model_name]['test_performance'] = test_performance
 
             # Building and unique DataFrame with performances retrieved
-            model_performance = train_performance.concat(test_performance)
-            df_performances = df_performances.concat(model_performance)
+            model_performance = pd.concat([train_performance, test_performance])
+            #model_performance = train_performance.concat(test_performance)
+            df_performances = pd.concat([df_performances, model_performance])
+            #df_performances = df_performances.concat(model_performance)
 
             # Saving some attributes on model_info dictionary for further access
             model_data = {
@@ -276,7 +277,7 @@ class BinaryClassifiersAnalysis:
                 try:
                     # If overwrite is False, tries reading existing metrics data and applying append on it
                     log_performances = pd.read_csv(performances_filepath)
-                    full_performances = log_performances.concat(df_performances)
+                    full_performances = pd.concat([log_performances,df_performances])
                     full_performances.to_csv(performances_filepath, index=False)
                 except FileNotFoundError:
                     print('Log de performances do modelo não existente no caminho especificado. Salvando apenas o atual.')
@@ -326,7 +327,7 @@ class BinaryClassifiersAnalysis:
 
             # Saving the feature iportance at model's dictionary (classifiers_info)
             self.classifiers_info[model_name]['feature_importances'] = feat_imp
-            all_feat_imp = all_feat_imp.concat(feat_imp)
+            all_feat_imp = pd.concat([all_feat_imp, feat_imp])
             all_feat_imp['model'] = model_name
 
         # Retrieving feature importance for a specific model
