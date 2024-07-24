@@ -1,13 +1,13 @@
 /* Created tables for reference
-select * from customer limit 10;
-select * from geolocation limit 10;
-select * from geolocation_state;
-select * from order_item limit 10;
-select * from orders limit 10;
-select * from product limit 10;
-select * from product_category limit 10;
-select * from review limit 10;
-select * from seller limit 10;
+select count(*) from customer limit 10;
+select count(*) from geolocation limit 10;
+select count(*) from geolocation_state;
+select count(*) from orders limit 10;
+select count(*) from order_item limit 10;
+select count(*) from product limit 10;
+select count(*) from product_category limit 10;
+select count(*) from review limit 10;
+select count(*) from seller limit 10;
 */
 
 /*
@@ -57,6 +57,9 @@ select
 	(case when (sum(case when order_estm_delivery_dtm is null then 1 else 0 end)) > 0 then True else False end) as is_estmdelivery_null
 from orders;
 -- Orders has NULL values in the order_approved_dtm, order_carrier_delivery_dtm, & order_cust_delivery_dtm fields
+-- 160 NULL - order_approved_dtm
+-- 1,783 NULL - order_carrier_delivery_dtm
+-- 2,965 NULL - order_cust_delivery_dtm
 -- Remove unnecessary fields for case study
 alter table orders
 	drop column order_approved_dtm,
@@ -159,7 +162,7 @@ insert into product_category (
 	category_name,
 	category_name_en)
 values
-	('portateis_cozinha_e_preparadores_de_alimentos', 'portable_kitchen_food_processors'),
+	('portateis_cozinha_e_preparadores_de_alimentos', 'appliances_kitchen_food_processors'),
 	('pc_gamer', 'pc_gamer');
 
 select category_name

@@ -106,6 +106,7 @@ inner join product prod
 inner join product_category pc
 	on prod.category_name = pc.category_name
 group by 1
+limit 10
 ;
 
 	
@@ -169,19 +170,6 @@ inner join order_item oi
 group by 1
 order by 2 desc;
 
-select 
-	pc.category_name_en,
-	rank() over(order by count (distinct oi.order_id) desc) as pop_ranking,
-	rank() over(order by sum(oi.product_price) desc) as rev_ranks,
-	rank
---	count(distinct oi.order_id) as order_cnt
-from order_item oi
-inner join product prod
-	on oi.product_id = prod.product_id
-inner join product_category pc
-	on prod.category_name = pc.category_name
-group by 1
-;
 
 -- Are there sellers that dominate specific product categories (market share)?
 -- Which sellers are making the most money?
