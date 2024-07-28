@@ -6,9 +6,10 @@
 import numpy as np
 import pandas as pd
 #import sqlalchemy as db
-from postgresql_connection import db_connect
-from util_text_process import re_breakline, re_dates, re_hiperlinks, re_money, re_negation, re_numbers, \
-    re_special_chars, re_whitespaces, ApplyRegex, StemmingProcess, StopWordsRemoval
+import postgresql_connection as pgsql
+from util_text_process import re_breakline, re_dates, re_hiperlinks, re_money, \
+    re_negation, re_numbers, re_special_chars, re_whitespaces, ApplyRegex, \
+        StemmingProcess, StopWordsRemoval
 import nltk
 nltk.download('stopwords')
 from nltk.stem import RSLPStemmer
@@ -19,7 +20,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 #from joblib import dump
 from sklearn.linear_model import LogisticRegression
 from util_ml import BinaryClassifiersAnalysis, cross_val_performance
-#from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, roc_curve
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score, roc_curve
 
 # File Variables
 # FIXCODE
@@ -44,7 +45,8 @@ METRICS_FILEPATH = 'metrics/model_performance.csv' # Take a look at your project
 # Variables for retrieving model
 MODEL_KEY = 'LogisticRegression'
 
-connection = db_connect()
+"""
+connection = pgsql.db_connect()
 
 customer = pd.read_sql_table('customer', connection)
 geolocation = pd.read_sql_table('geolocation', connection)
@@ -55,6 +57,7 @@ product = pd.read_sql_table('product', connection)
 product_category = pd.read_sql_table('product_category', connection)
 review = pd.read_sql_table('review', connection)
 seller = pd.read_sql_table('seller', connection)
+"""
 
 class ColumnMapping(BaseEstimator, TransformerMixin):
     """
