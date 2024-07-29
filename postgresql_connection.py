@@ -12,7 +12,6 @@ be specific to the user's setup.
 
 """
 import sqlalchemy as db
-import pandas as pd
 
 def db_connect():
     # Return DB credentials
