@@ -33,7 +33,7 @@ from sklearn.metrics import (accuracy_score, classification_report,
 from sklearn.naive_bayes import MultinomialNB
 #from matplotlib import rc
 
-from data_processing import conv_to_sentiment, regex_linebreaks, regex_hyperlinks, \
+from sentiment_data_processing import conv_to_sentiment, regex_linebreaks, regex_hyperlinks, \
     regex_dates, regex_money, regex_numbers, regex_special_chars, regex_whitespace, \
         split_data, create_tokenized_data, evaluate_metrics, input_to_torch_device, \
             eval_preds, viz_conf_matrix, viz_wordcloud

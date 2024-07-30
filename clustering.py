@@ -35,8 +35,53 @@ Customer Segmentation via Recency, Frequency, Monetary (RFM) Analysis
 -- Create higher rates of customer response, expanding loyalty and customer lifetime
 """
 
+"""
+-------------------------------------------------------------------------------
+-- Load Data --
+-------------------------------------------------------------------------------
+"""
 connection = db_connect()
 rfm = pd.read_sql_table('rfm_top3_prodcat', connection)
+
+
+# Geospatial Work
+
+rfm['geoloc_lat'] = pd.to_numeric(rfm['geoloc_lat'])
+rfm['geoloc_long'] = pd.to_numeric(rfm['geoloc_long'])
+
+
+"""
+-------------------------------------------------------------------------------
+-- Data Preprocessing --
+1. Make sure Kmeans input data is numeric
+2. Remove noise/outliers
+3. Ensure Normal distribution
+4. Ensure variables on same scale (normalized or standardized to have same mean/variance)
+5. Remove collinearity
+6. Reduce dimensions
+-------------------------------------------------------------------------------
+"""
+
+
+
+"""
+-------------------------------------------------------------------------------
+-- EDA --
+-------------------------------------------------------------------------------
+"""
+# Remove coordinates not within the bounds of Brazil's borders
+# Brazil North = 5 deg 16′ 27.8″ N latitude.;
+rfm = rfm[rfm.geoloc_lat <= 5.269582]
+# Brazil West = 73 deg, 58′ 58.19″W Long.
+rfm = rfm[rfm.geoloc_long >= -73.98306]
+# Brazil South = 33 deg, 45′ 04.21″ S Latitude.
+rfm = rfm[rfm.geoloc_lat >= -33.750936]
+# Brazil East =  34 deg, 47′ 35.33″ W Long.
+rfm = rfm[rfm.geoloc_long <=  -34.793015]
+
+# transform coordinates to Mercator x/y Coords
+
+#------------------------------------------------------------------------------
 
 rfm_only = pd.DataFrame(data = rfm, columns = ['cust_id','frequency','recency','monetary'])
 rfm_only = rfm_only[['cust_id','frequency','recency','monetary']].drop_duplicates()
