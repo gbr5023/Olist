@@ -297,3 +297,5 @@ create table rfm_top3_prodcat as (
 );	
 
 select * from rfm_top3_prodcat order by cust_id;
+
+select count(distinct order_id) from payment;

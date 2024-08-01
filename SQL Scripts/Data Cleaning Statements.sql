@@ -8,6 +8,7 @@ select count(*) from product limit 10;
 select count(*) from product_category limit 10;
 select count(*) from review limit 10;
 select count(*) from seller limit 10;
+select count(*) from payment;
 */
 
 /*
@@ -295,6 +296,14 @@ select
 	(case when (sum(case when payment_type is null then 1 else 0 end)) > 0 then True else False end) as is_paytype_null,
 	(case when (sum(case when payment_installments is null then 1 else 0 end)) > 0 then True else False end) as is_payinstall_null,
 	(case when (sum(case when payment_value is null then 1 else 0 end)) > 0 then True else False end) as is_payvalue_null
+from payment;
+
+select
+	(sum(case when order_id is null then 1 else 0 end)) as is_orderId_null,
+	(sum(case when payment_sequential is null then 1 else 0 end)) as is_payseq_null,
+	(sum(case when payment_type is null then 1 else 0 end)) as is_paytype_null,
+	(sum(case when payment_installments is null then 1 else 0 end)) as is_payinstall_null,
+	(sum(case when payment_value is null then 1 else 0 end)) as is_payvalue_null
 from payment;
 
 /*

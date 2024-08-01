@@ -69,6 +69,8 @@ rfm['geoloc_long'] = pd.to_numeric(rfm['geoloc_long'])
 -- EDA --
 -------------------------------------------------------------------------------
 """
+
+"""
 # Remove coordinates not within the bounds of Brazil's borders
 # Brazil North = 5 deg 16′ 27.8″ N latitude.;
 rfm = rfm[rfm.geoloc_lat <= 5.269582]
@@ -80,6 +82,7 @@ rfm = rfm[rfm.geoloc_lat >= -33.750936]
 rfm = rfm[rfm.geoloc_long <=  -34.793015]
 
 # transform coordinates to Mercator x/y Coords
+"""
 
 #------------------------------------------------------------------------------
 
