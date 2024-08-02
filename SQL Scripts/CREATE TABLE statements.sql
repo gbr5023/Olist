@@ -103,3 +103,37 @@ CREATE TABLE Payment (
 );
 
 select * from payment;
+
+-------------------------------------------------------
+-- Create table for RFM Analysis --
+-------------------------------------------------------
+
+create table rfm as (
+	with frequency as (
+	select ord.cust_id, count(distinct ord.order_id) as freq
+	from orders ord
+	group by 1)	
+	, recency as (
+	select ord.cust_id, ('2018-08-29' - order_dt)+1 as rec
+	from orders ord
+	group by 1,2)	
+	, monetary as (
+	select ord.cust_id, sum(pay.payment_value) as mon
+	from orders ord
+	inner join payment pay
+		on ord.order_id = pay.order_id
+	group by 1	
+	)
+	select freq.cust_id, cust_zip_cd_prefix, cust_city, cust_state,
+		freq.freq as frequency,
+		rec.rec as recency, 
+		mon.mon as monetary
+	from frequency freq
+	inner join recency rec
+		on freq.cust_id = rec.cust_id
+	inner join monetary mon
+		on rec.cust_id = mon.cust_id
+	inner join customer cust
+		on freq.cust_id = cust.cust_id
+	group by 1,2,3,4,5,6,7
+);	

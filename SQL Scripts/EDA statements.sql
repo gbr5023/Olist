@@ -30,8 +30,6 @@ Analyses benefitting Olist (company)
 - What geographical markets have the most orders? Are there trends for more orders in urban areas vs rural areas?
 - What are the most popular product categories? most lucrative product categories? Is there an overlap?
 - Do Olist sellers specialize in specific product categories or a variety?
-- Are there sellers that dominate specific product categories (market share)?
-- Which sellers are making the most money?
 -
 */
 
@@ -194,13 +192,6 @@ from sellers_in_HB --25,730 Orders in Health and Beauty across 994 sellers
 with frequency as (
 	select ord.cust_id, count(distinct ord.order_id) as freq
 	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure') 
 	group by 1
 	order by 2 desc
 )
@@ -208,15 +199,8 @@ select * from frequency; -- 25,422
 
 -- Define Recency
 with recency as (
-	select ord.cust_id, ('2018-08-29' - order_dt) as rec
+	select ord.cust_id, ('2018-08-29' - order_dt)+1 as rec
 	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure') 
 	group by 1,2
 	order by 2
 )
@@ -227,13 +211,6 @@ select * from recency;
 with monetary as (
 	select ord.cust_id, sum(pay.payment_value) as mon
 	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure')
 	inner join payment pay
 		on ord.order_id = pay.order_id
 	group by 1
@@ -241,61 +218,18 @@ with monetary as (
 )
 select * from monetary;
 
-create table rfm_top3_prodcat as (
-	with frequency as (
-	select ord.cust_id, count(distinct ord.order_id) as freq
-	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure') 
-	group by 1)
-	, recency as (
-	select ord.cust_id, ('2018-08-29' - order_dt) as rec
-	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure') 
-	group by 1,2)
-	, monetary as (
-	select ord.cust_id, sum(pay.payment_value) as mon
-	from orders ord
-	inner join order_item oi
-		on ord.order_id = oi.order_id
-	inner join product prod
-		on oi.product_id = prod.product_id
-	inner join product_category prodcat
-		on prod.category_name = prodcat.category_name 
-		and prodcat.category_name_en in ('bed_bath_table', 'health_beauty', 'sports_leisure')
-	inner join payment pay
-		on ord.order_id = pay.order_id
-	group by 1
-	)
-	select freq.cust_id, cust_zip_cd_prefix, cust_city, cust_state,
-		geo.geoloc_lat, geo.geoloc_long,
-		geost.geoloc_state_name, geost.geoloc_region,
-		freq.freq as frequency,
-		rec.rec as recency, mon.mon as monetary
-	from frequency freq
-	inner join recency rec
-		on freq.cust_id = rec.cust_id
-	inner join monetary mon
-		on rec.cust_id = mon.cust_id
-	inner join customer cust
-		on freq.cust_id = cust.cust_id
-	inner join geolocation geo
-		on cust.cust_zip_cd_prefix = geo.zip_cd_prefix
-	inner join geolocation_state geost
-		on geo.geoloc_state = geost.geoloc_state
-);	
 
 select * from rfm_top3_prodcat order by cust_id;
 
 select count(distinct order_id) from payment;
+
+-- check for any negative values in payments
+select * from payment
+where payment_value = 0.00;
+-- 4 records need to be filtered out prior to RFM
+-- voucher orders = freebies
+-- check for outliers and correlation with Python Pandas
+
+-- check for any negative values in order_item
+select min(product_price) from order_item;
+-- none
