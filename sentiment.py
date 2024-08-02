@@ -21,14 +21,11 @@ import nltk
 #import datasets
 from tqdm.notebook import tqdm
 #from wordcloud import WordCloud
-import postgresql_connection
 # if the console cannot find this file, please execute the file once
 from postgresql_connection import db_connect
-from sklearn import metrics
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (accuracy_score, classification_report,
-                             confusion_matrix, precision_recall_fscore_support)
+from sklearn.metrics import (classification_report, confusion_matrix)
 #from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 #from matplotlib import rc
