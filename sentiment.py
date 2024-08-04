@@ -12,34 +12,31 @@ import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
+sns.set_theme(style='whitegrid', font_scale=1.2, font='sans-serif')
+sns.set_palette(sns.color_palette("Set2"))
 import matplotlib.pyplot as plt
 import re
-
 import torch
 import nltk
-#import torch.nn.functional as tfunc
-#import datasets
-from tqdm.notebook import tqdm
-#from wordcloud import WordCloud
+import pprint
+
 # if the console cannot find this file, please execute the file once
 from postgresql_connection import db_connect
+from tqdm.notebook import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (classification_report, confusion_matrix)
-#from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-#from matplotlib import rc
-
-from sentiment_data_processing import conv_to_sentiment, regex_linebreaks, regex_hyperlinks, \
-    regex_dates, regex_money, regex_numbers, regex_special_chars, regex_whitespace, \
-        split_data, create_tokenized_data, evaluate_metrics, input_to_torch_device, \
-            eval_preds, viz_conf_matrix, viz_wordcloud
-
-# Torch ML libraries
-#import transformers
-#import torch
-#from torch import nn, optim
-#from torch.utils.data import Dataset, DataLoader
+from sentiment_data_processing import (conv_to_sentiment, regex_linebreaks, 
+                                       regex_hyperlinks, regex_dates, 
+                                       regex_money, regex_numbers, 
+                                       regex_special_chars, regex_whitespace, 
+                                       split_data, create_tokenized_data, 
+                                       evaluate_metrics, input_to_torch_device, 
+                                       eval_preds, viz_conf_matrix, 
+                                       zip_wordcounts_relative_freq,
+                                       print_word_rel_freq,
+                                       viz_wordcloud)
 from transformers import (AdamW, BertForSequenceClassification, BertTokenizer,
                           DataCollatorWithPadding,
                           get_linear_schedule_with_warmup)
@@ -81,9 +78,6 @@ torch.manual_seed(rand_seed)
 """
 review['review_score'] = review['review_score'].astype('int64').astype('category')
 
-sns.set_theme(style='whitegrid', font_scale=1.2, font='sans-serif')
-sns.set_palette(sns.color_palette("Set2"))
-
 fig_scores = sns.countplot(data = review, x="review_score", palette="Set2")
 plt.xlabel("Review Score")
 plt.title("Review Counts by Score")
@@ -98,12 +92,29 @@ plt.title("Review Counts by Sentiment Type")
 plt.show(fig_sentiment)
 
 review_new = review[review.review_message != 'Not Defined']
-#review_new['review_sentiment'] = review_new.review_score.apply(conv_to_sentiment)
 
 # visualize word cloud of positive and negative reviews
-viz_wordcloud(review_new.loc[review_new['review_sentiment'] == 'Positive'], "review_message")
-viz_wordcloud(review_new.loc[review_new['review_sentiment'] == 'Negative'], "review_message")
+positive_wc_dict, positive_wc = viz_wordcloud(review_new.loc[review_new['review_sentiment'] == 'Positive'], 
+              "review_message")
+negative_wc_dict, negative_wc = viz_wordcloud(review_new.loc[review_new['review_sentiment'] == 'Negative'], 
+              "review_message")
+# visualize review score = 3 (neutral for interpreting results)
+neutral_wc_dict, neutral_wc = viz_wordcloud(review_new.loc[review_new['review_score'] == 3], 
+              "review_message")
+# Sort the neutral dictionary
+neutral_word_freq = {k: v for k, v in sorted(neutral_wc_dict.items(),
+                                   reverse=True, 
+                                   key=lambda item: item[1])}
 
+# Print relative word frequencies
+neutral_rel_freq = neutral_wc.words_
+neutral_keys_top20 = list(neutral_word_freq.keys())[:20]
+neutral_items_top20_word = list(neutral_word_freq.values())[:20]
+neutral_items_top20_rel = list(neutral_rel_freq.values())[:20]
+neutral_freq_dict = zip_wordcounts_relative_freq(neutral_keys_top20,
+                                              neutral_items_top20_word,
+                                              neutral_items_top20_rel)
+print_word_rel_freq(neutral_freq_dict, "Neutral")
 
 """
 -------------------------------------------------------------------------------
@@ -143,9 +154,6 @@ sns.histplot(review_token_len)
 plt.xlim([0, 215]);
 plt.xlabel('Review Tokenized Length')
 
-# most reviews < 100 tokens, set max length to 175 to cover all
-#max_length = 175
-
 
 """
 -------------------------------------------------------------------------------
@@ -155,8 +163,6 @@ plt.xlabel('Review Tokenized Length')
 
 # split into 80-10-10
 train_data, validation_data, test_data = split_data(review_new)
-#train_data, test_data = train_test_split(review_new, test_size=0.2, random_state=rand_seed)
-#validation_data, test_data = train_test_split(test_data, test_size=0.5, random_state=rand_seed)
 
 print('Training Set:    ', train_data.shape[0])
 print('Validation Set:  ', validation_data.shape[0])
@@ -167,8 +173,9 @@ Validation Set:   3909
 Test Set:         3909
 """
 
-#tokenizer = BertTokenizer.from_pretrained('neuralmind/bert-base-portuguese-cased')
-tokenized_dict = create_tokenized_data(bert_tokenizer, (train_data, validation_data, test_data))
+tokenized_dict = create_tokenized_data(bert_tokenizer, (train_data, 
+                                                        validation_data, 
+                                                        test_data))
 
 
 """
@@ -237,7 +244,9 @@ for i in tracker_epoch:
         tracker_batch.set_postfix(loss=accuracy_loss)
         
         if ind%5000 == 0:
-            predictions, labels = eval_preds(bert_model, validation_data_loader, torch_device)
+            predictions, labels = eval_preds(bert_model, 
+                                             validation_data_loader, 
+                                             torch_device)
             train_metrics = evaluate_metrics(predictions, labels)
             print(train_metrics)
             
@@ -252,12 +261,14 @@ for i in tracker_epoch:
 -- Sentiment Analysis - Test --
 -------------------------------------------------------------------------------
 """
-test_predictions, test_labels = eval_preds(bert_model, test_data_loader, torch_device)
+test_predictions, test_labels = eval_preds(bert_model, test_data_loader, 
+                                           torch_device)
 test_metrics = evaluate_metrics(test_predictions, test_labels)
 print(test_metrics)
 
 transpose_sentiments = ['negative', 'positive']
-print(classification_report(test_labels, test_predictions, target_names=transpose_sentiments))
+print(classification_report(test_labels, test_predictions, 
+                            target_names=transpose_sentiments))
 """
               precision    recall  f1-score   support
 
@@ -281,7 +292,8 @@ weighted avg       0.91      0.91      0.91      3909
 """
 
 conf_mat = confusion_matrix(test_labels, test_predictions)
-conf_mat_df = pd.DataFrame(conf_mat, index = transpose_sentiments, columns = transpose_sentiments)
+conf_mat_df = pd.DataFrame(conf_mat, index = transpose_sentiments, 
+                           columns = transpose_sentiments)
 viz_conf_matrix(conf_mat_df)
 
 
@@ -312,11 +324,13 @@ ytrain_comp_data = (train_data['review_sentiment'] == 'Positive').astype(int).va
 yvalid_comp_data = (validation_data['review_sentiment'] == 'Positive').astype(int).values
 ytest_comp_data = (test_data['review_sentiment'] == 'Positive').astype(int).values
 
-log_reg = LogisticRegression(random_state=0, class_weight='balanced', max_iter=500, verbose=True)
+log_reg = LogisticRegression(random_state=0, class_weight='balanced', 
+                             max_iter=500, verbose=True)
 log_reg.fit(xtrain_comp_data, ytrain_comp_data)
 ypredictions_lr = log_reg.predict(xvalid_comp_data)
 
-print(classification_report(yvalid_comp_data, ypredictions_lr, target_names=transpose_sentiments))
+print(classification_report(yvalid_comp_data, ypredictions_lr, 
+                            target_names=transpose_sentiments))
 """
               precision    recall  f1-score   support
 
@@ -329,14 +343,16 @@ weighted avg       0.90      0.88      0.89      3909
 """
 
 conf_mat_lr = confusion_matrix(yvalid_comp_data, ypredictions_lr)
-conf_mat_df_lr = pd.DataFrame(conf_mat_lr, index = transpose_sentiments, columns = transpose_sentiments)
+conf_mat_df_lr = pd.DataFrame(conf_mat_lr, index = transpose_sentiments, 
+                              columns = transpose_sentiments)
 viz_conf_matrix(conf_mat_df_lr)
 
 # Naive Bayes
 naive_bayes = MultinomialNB()
 naive_bayes.fit(xtrain_comp_data, ytrain_comp_data)
 ypredictions_nb = naive_bayes.predict(xvalid_comp_data)
-print(classification_report(yvalid_comp_data, ypredictions_nb, target_names=transpose_sentiments))
+print(classification_report(yvalid_comp_data, ypredictions_nb, 
+                            target_names=transpose_sentiments))
 """
               precision    recall  f1-score   support
 
@@ -349,5 +365,6 @@ weighted avg       0.88      0.88      0.88      3909
 """
 
 conf_mat_nb = confusion_matrix(yvalid_comp_data, ypredictions_nb)
-conf_mat_df_nb = pd.DataFrame(conf_mat_nb, index = transpose_sentiments, columns = transpose_sentiments)
+conf_mat_df_nb = pd.DataFrame(conf_mat_nb, index = transpose_sentiments, 
+                              columns = transpose_sentiments)
 viz_conf_matrix(conf_mat_df_nb)

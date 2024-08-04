@@ -19,6 +19,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import nltk
+from collections import defaultdict 
 
 def viz_wordcloud(df, col):
     port_stopwords = nltk.corpus.stopwords.words('portuguese')
@@ -30,6 +31,20 @@ def viz_wordcloud(df, col):
     plt.imshow(wcloud, interpolation='bilinear')
     plt.axis('off')
     plt.show()
+    
+    return wcloud.process_text(words), wcloud
+
+def zip_wordcounts_relative_freq(keys_list, word_freq_list, rel_freq_list):
+    zipped_items = list(zip(word_freq_list, rel_freq_list))
+    freq_dict = {k:v for k,v in zip(keys_list, zipped_items)}
+    
+    return freq_dict
+
+def print_word_rel_freq(dct, sentiment):
+    print(f"Top 20 {sentiment} Words:")
+    print("* Each word is followed by its word and relative frequency *\n")
+    for word, freq in dct.items():
+        print("{}:\t{}".format(word, freq))
 
 # convert review scores to sentiment
 def conv_to_sentiment(review_score):

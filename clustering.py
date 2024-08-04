@@ -87,7 +87,7 @@ rfm_only = rfm[['recency', 'frequency', 'monetary']].copy()
 1. Check for nulls
 2. Check for negative values
 3. Make sure Kmeans input data is numeric
-4. Remove noise/outliers
+4. Remove noise/outliers (if any)
 5. Remove collinearity (if any)
 -------------------------------------------------------------------------------
 """
