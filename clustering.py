@@ -24,7 +24,13 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 from sklearn.cluster import KMeans # clustering algo
 from sklearn.metrics import silhouette_score
-from sklearn.preprocessing import StandardScaler, RobustScaler 
+from sklearn.preprocessing import StandardScaler, RobustScaler, PowerTransformer
+from sklearn.manifold import TSNE
+pt = PowerTransformer(method = 'box-cox')
+ss = StandardScaler()
+rs = RobustScaler()
+from sklearn.linear_model import LinearRegression #score standardization techniques
+lr = LinearRegression()
 from yellowbrick.cluster import KElbowVisualizer
 import seaborn as sns
 sns.set(style='whitegrid')
@@ -87,8 +93,7 @@ rfm_only = rfm[['recency', 'frequency', 'monetary']].copy()
 1. Check for nulls
 2. Check for negative values
 3. Make sure Kmeans input data is numeric
-4. Remove noise/outliers (if any)
-5. Remove collinearity (if any)
+4. Remove collinearity (if any)
 -------------------------------------------------------------------------------
 """
 null_check = 0
@@ -120,35 +125,9 @@ min        1.000000      1.000000      9.590000
 75%      350.000000      2.000000    176.330000
 max      696.000000      2.000000  13664.080000
 """
-
-# Use IQR method to remove outliers from monetary field
-def outliers_iqr(df, column):
-    quartile_1 = df[column].quantile(0.25)
-    #print(quartile_1)
-    quartile_3 = df[column].quantile(0.75)
-    #print(quartile_3)
-    iqr = quartile_3 - quartile_1
-    #print(iqr)
-    
-    df = df.loc[lambda df: ~((df[column] < (quartile_1 - 1.5 * iqr)) | (df[column] > (quartile_3 + 1.5 * iqr)))]
-    return df
-
-# remove outliers recency and monetary columns using IQR method
-rfm_outliers_rem = outliers_iqr(rfm_only, 'monetary')
-rfm_outliers_rem.describe()
-"""
-            recency     frequency      monetary
-count  88894.000000  88894.000000  88894.000000
-mean     240.511294      1.500484    115.046487
-std      152.531194      0.500003     72.154254
-min        1.000000      1.000000      9.590000
-25%      117.000000      1.000000     58.620000
-50%      222.000000      2.000000     97.090000
-75%      350.000000      2.000000    155.450000
-max      696.000000      2.000000    347.970000
-"""
 # check collinearity
-sns.heatmap(rfm_outliers_rem.iloc[:, 0:3].corr())
+sns.heatmap(rfm_only.iloc[:, 0:3].corr())
+
     
 """
 -------------------------------------------------------------------------------
@@ -157,45 +136,38 @@ sns.heatmap(rfm_outliers_rem.iloc[:, 0:3].corr())
 2. Ensure variables on same scale (normalized or standardized to have same mean/variance)
 -------------------------------------------------------------------------------
 """
-scale = StandardScaler()
-rfm_norm = pd.DataFrame(scale.fit_transform(rfm_outliers_rem))
-rfm_norm.columns = ['norm_Recency', 'norm_Frequency', 'norm_Monetary']
-rfm_norm.describe()
-
-scale2 = RobustScaler ()
-rfm_norm2 = pd.DataFrame(scale.fit_transform(rfm_only))
-rfm_norm2.columns = ['norm_Recency', 'norm_Frequency', 'norm_Monetary']
-rfm_norm2.describe()
+figs, ax = plt.subplots(1, 3, figsize = (20, 5))
+# Compare standardization techniques
+ss_rfm = pd.DataFrame(ss.fit_transform(rfm_only))
+ss_rfm.columns = ['norm_Recency', 'norm_Frequency', 'norm_Monetary']
+for i, measure in enumerate(list(ss_rfm.columns)):
+    sns.displot(ss_rfm[measure], ax = ax[i])
+    
+rs_rfm = pd.DataFrame(rs.fit_transform(rfm_only))
+rs_rfm.columns = ['norm_Recency', 'norm_Frequency', 'norm_Monetary']
+for i, measure in enumerate(list(rs_rfm.columns)):
+    sns.displot(rs_rfm[measure], ax = ax[i])
+    
+pt_rfm = pd.DataFrame(pt.fit_transform(rfm_only))
+pt_rfm.columns = ['norm_Recency', 'norm_Frequency', 'norm_Monetary']
+for i, measure in enumerate(list(pt_rfm.columns)):
+    sns.displot(pt_rfm[measure], ax = ax[i])
+    
+# The Box-Cox technique produced the most normal distributions
+pt_rfm.describe()
 """
-StandardScaler
-       norm_Recency  norm_Frequency  norm_Monetary
-count  8.889400e+04    8.889400e+04   8.889400e+04
-mean  -1.998287e-17   -1.251727e-16  -2.856750e-16
-std    1.000006e+00    1.000006e+00   1.000006e+00
-min   -1.570254e+00   -1.000968e+00  -1.461550e+00
-25%   -8.097490e-01   -1.000968e+00  -7.820302e-01
-50%   -1.213614e-01    9.990330e-01  -2.488639e-01
-75%    7.178159e-01    9.990330e-01   5.599634e-01
-max    2.986217e+00    9.990330e-01   3.228151e+00
-
-vs
-
-RobustScaler
+PowerTransformer (Box-Cox)
        norm_Recency  norm_Frequency  norm_Monetary
 count  9.646900e+04    9.646900e+04   9.646900e+04
-mean  -2.850450e-17   -9.530961e-17  -1.065052e-16
+mean   2.027723e-16   -1.502563e-17  -7.725676e-16
 std    1.000005e+00    1.000005e+00   1.000005e+00
-min   -1.568143e+00   -1.000633e+00  -6.867081e-01
-25%   -8.091346e-01   -1.000633e+00  -4.477443e-01
-50%   -1.221012e-01    9.993679e-01  -2.494076e-01
-75%    7.154252e-01    9.993679e-01   7.528880e-02
-max    2.979364e+00    9.993679e-01   6.171391e+01
+min   -2.377072e+00   -1.000633e+00  -3.907618e+00
+25%   -7.140577e-01   -1.000633e+00  -6.755527e-01
+50%    4.443087e-02    9.993679e-01   3.983715e-02
+75%    7.715654e-01    9.993679e-01   6.629792e-01
+max    2.280559e+00    9.993679e-01   3.950724e+00
 """
-
-figs, ax = plt.subplots(1, 3, figsize = (20, 5))
-for i, measure in enumerate(list(rfm_norm.columns)):
-    sns.distplot(rfm_norm[measure], ax = ax[i])
-
+    
     
 """
 -------------------------------------------------------------------------------
@@ -203,19 +175,9 @@ for i, measure in enumerate(list(rfm_norm.columns)):
 -------------------------------------------------------------------------------
 """
 # Choosing the optimal cluster size
-"""
-sse_k = []
-
-for num_cluster in range(0, 8):
-    kmeans = KMeans(n_clusters = num_cluster + 1, random_state = 808, max_iter = 50).fit(rfm_norm)
-    sse_k.append(kmeans.inertia_)
-    
-sns.pointplot(x = list(range(1, 9)), y = sse_k)
-plt.show()
-"""
 kmeans = KMeans(n_init=10, random_state = 808) # num of times KMeans is run w/ different centroid seeds
 visualizer = KElbowVisualizer(kmeans, k = (2, 9)) 
-visualizer.fit(rfm_norm)
+visualizer.fit(pt_rfm)
 visualizer.show()
 # According to this graph, the optimal cluster size is 5
 
@@ -225,19 +187,19 @@ range_clusters = list(range(2, 9))
 
 for num_cluster in range_clusters:
     kmeans = KMeans(n_clusters = num_cluster, n_init = 10, random_state = 808)
-    cluster_labs = kmeans.fit_predict(rfm_norm)
+    cluster_labs = kmeans.fit_predict(pt_rfm)
     
-    silh_avg = silhouette_score(rfm_norm, cluster_labs)
+    silh_avg = silhouette_score(pt_rfm, cluster_labs)
     silh_avg_scores.append(silh_avg)
     print("For cluster size = {0}, the silhouette score is {1}".format(num_cluster, silh_avg))
 """
-For cluster size = 2, the silhouette score is 0.36933829230075793
-For cluster size = 3, the silhouette score is 0.37394991022444046
-For cluster size = 4, the silhouette score is 0.3668156724459828
-For cluster size = 5, the silhouette score is 0.375814978471408
-For cluster size = 6, the silhouette score is 0.39589210869763936
-For cluster size = 7, the silhouette score is 0.39342433407926597
-For cluster size = 8, the silhouette score is 0.3779786858042015
+For cluster size = 2, the silhouette score is 0.3618521116744522
+For cluster size = 3, the silhouette score is 0.31541023666359924
+For cluster size = 4, the silhouette score is 0.31748101466042367
+For cluster size = 5, the silhouette score is 0.3257072646016416
+For cluster size = 6, the silhouette score is 0.34067210416371485
+For cluster size = 7, the silhouette score is 0.3334874042237079
+For cluster size = 8, the silhouette score is 0.32477104772151466
 """    
 plt.figure(figsize = (10,6))
 plt.plot(range(2, 9), silh_avg_scores, marker = 'o')
@@ -246,49 +208,17 @@ plt.xlabel('Cluster Size')
 plt.ylabel('Score')
 plt.show()
 # The silhouette score implies that a cluster size of 6 offers a fair clustering in comparison with the other sizes
+# We can ignore a cluster size of 2 as it would be hard to interpret in the context of this case study
 # Using the elbow method, either a cluster size of 5 or 6 can be chosen
-# To compromise between the two suggestions, 6 was chosen
 
+# Identify Clusters (experiment with 5 and 6)
+kmeans = KMeans(n_clusters = 6, random_state = 808).fit(pt_rfm)
+centers = kmeans.cluster_centers_
+labels = kmeans.labels_
+rfm_pre_norm = rfm_only.copy()
 
-
-# Identify Clusters
-model = KMeans(n_clusters = 6, random_state = 808).fit(rfm_norm)
-centers = model.cluster_centers_
-labels = model.labels_
-rfm_pre_norm = rfm_outliers_rem.copy()
-
-"""
-# Visualize Clusters
-fig = plt.figure(figsize=(12, 9))
-ax = fig.add_subplot(111, projection='3d')
-
-# Create a 3D scatter plot, colored by cluster
-scatter = ax.scatter(rfm_pre_norm.iloc[:, 0], rfm_pre_norm.iloc[:, 1], rfm_pre_norm.iloc[:, 2], c=labels, cmap='coolwarm', edgecolor='k', s=50, alpha=0.8, label='Customer Clusters')
-ax.scatter(centers[:, 0], centers[:, 1], centers[:, 2], marker='o', color='red', s=200, edgecolor='k', label='Cluster Centers')
-
-# Labels/title
-ax.set_xlabel('Recency')
-ax.set_ylabel('Frequency')
-ax.set_zlabel('Monetary Value')
-ax.set_title('K-Means Clustering 3D Visualization', size=20)
-
-# Enhancements
-ax.grid(True)
-ax.xaxis.set_pane_color((0.95, 0.95, 0.95, 1.0))
-ax.yaxis.set_pane_color((0.95, 0.95, 0.95, 1.0))
-ax.zaxis.set_pane_color((0.95, 0.95, 0.95, 1.0))
-ax.view_init(elev=20, azim=120)  # Adjust for best angle
-
-# Legend
-legend = ax.legend(*scatter.legend_elements(), title="Clusters")
-ax.add_artist(legend)
-ax.legend(['Cluster Centers'], loc='upper left')
-
-plt.tight_layout()
-plt.show()
-"""
-
-rfm_pre_norm['cluster'] = labels
+# Create a cluster label column in original dataset
+rfm_pre_norm = rfm_pre_norm.assign(cluster = labels)
 melted_rfm_pre_norm = pd.melt(rfm_pre_norm.reset_index(),
                               id_vars = ['cust_id', 'cluster'],
                               value_vars = ['recency', 'frequency', 'monetary'],
@@ -297,38 +227,43 @@ melted_rfm_pre_norm = pd.melt(rfm_pre_norm.reset_index(),
 sns.lineplot(data = melted_rfm_pre_norm, x = 'Measure', y = 'Value', hue = 'cluster')
 plt.legend(title = 'Clusters')
 
+# create flattened graph
+rfm_pre_norm = rfm_pre_norm.rename(str, axis = "columns")
+model_tsne = TSNE(random_state = 808)
+model_transf = model_tsne.fit_transform(rfm_pre_norm)
+plt.title('Flattened Graph of {} Clusters'.format(6))
+sns.scatterplot(x = model_transf[:,0], y = model_transf[:,1], hue = labels, style = labels, palette = "Set1")
+
 stat_summary = rfm_pre_norm.groupby('cluster').agg({
     'recency': ['mean', 'min', 'max'],
     'frequency': ['mean', 'min', 'max'],
     'monetary': ['mean', 'min', 'max', 'count']})
 """
-	recency                     frequency		monetary	
-	mean	            min	max	mean min max	mean	            min	    max	    count 
+K = 6
+	recency                     frequency         monetary	
+	mean	            min	max	mean min max      mean	                min	    max        count 
 cluster										
-0	129.34278996063998	1	269	1.0	 1	 1	    81.40977764146604	9.59	175.41	19563
-1	403.97120076981236	261	696	2.0	 2	 2	    89.14134510962953	10.07	267.49	14549
-2	400.91107247927255	261	696	1.0	 1	 1	    86.58895159133459	11.63	266.11	14956
-3	214.14321012057718	1	695	2.0	 2	 2	    221.6418926665349	140.08	347.97	10118
-4	133.303788528477	1	279	2.0	 2	 2	    80.16642435554658	10.89	171.12	19823
-5	219.23045017703592	2	695	1.0	 1	 1	    223.63879312089026	141.23	347.89	9885
+0	327.97541126547696	46	696	2.0	2	2         259.24778643259896	85.08	7274.88    17203
+1	311.81190080531763	5	696	1.0	1	1         55.722123865524736	9.59	98.79      15646
+2	82.71401634192331	1	207	1.0	1	1         145.25061785040856	14.29	4163.51    15910
+3	81.69059390048155	1	203	2.0	2	2         152.8825573033708	    16.29	6922.21    15575
+4	326.051898125901	59	695	1.0	1	1         273.28848570398844	91.16	13664.08   16648
+5	302.13198166203915	17	696	2.0	2	2         54.73138503260799	    10.07	97.88	   15487
 
-From the line plot and statistics summary, cluster 3 is the group of customers
-to target as they have the highest purchase mean, a relatively short time since their
-last order, and more transactions. Customers either had 1 or 2 orders placed, so 
-greater emphasis was pllaced on the recency and monetary metrics in interpreting
-the results.
+From the line plot and statistics summary, Cluster 6 has the most distinct clusters
 """
 
 
 """
 -------------------------------------------------------------------------------
 --Segmentation - Combing RFM Scoring and K-Means Clustering --
+- For further exploration
 
-Using the original dataset, (not scaled using StandardScale), apply a scoring
+Using the original dataset, (not scaled using PowerTransformer), apply a scoring
 system of 1 to 5 (5+5+5=15 is the ideal customer, 1+1+1=3 is a churn risk customer) 
 -------------------------------------------------------------------------------
 """
-rfm_w_scores = rfm_outliers_rem.copy()
+rfm_w_scores = rfm_only.copy()
 
 rfm_w_scores['score_Recency'] = pd.qcut(rfm_w_scores['recency'], 5, 
                                         labels = [5, 4, 3, 2, 1])
@@ -340,22 +275,11 @@ rfm_w_scores[['score_Recency', 'score_Frequency', 'score_Monetary']] = \
     rfm_w_scores[['score_Recency', 'score_Frequency', 'score_Monetary']].apply(pd.to_numeric)
 
 # Choosing the optimal cluster size
-"""
-sse_k_rfm = []
-
-for num_cluster in range(0, 8):
-    kmeans = KMeans(n_clusters = num_cluster + 1, random_state = 808, 
-                    max_iter = 50).fit(rfm_w_scores.iloc[:, 3:])
-    sse_k_rfm.append(kmeans.inertia_)
-    
-sns.pointplot(x = list(range(1, 9)), y = sse_k_rfm)
-plt.show()
-"""
 kmeans = KMeans(n_init=10, random_state = 808) # num of times KMeans is run w/ different centroid seeds
 visualizer = KElbowVisualizer(kmeans, k = (2, 9)) 
 visualizer.fit(rfm_w_scores.iloc[:, 3:])
 visualizer.show()
-# According to this graph, the optimal cluster size is 5
+# According to this graph, the optimal cluster size is 4
 
 
 # Now, check against silhouette score and plot
@@ -370,13 +294,13 @@ for num_cluster in range_clusters:
     silh_avg_scores_rfmK.append(silh_avg_rfm)
     print("For cluster size = {0}, the silhouette score is {1}".format(num_cluster, silh_avg_rfm))
 """
-For cluster size = 2, the silhouette score is 0.24461560559334516
-For cluster size = 3, the silhouette score is 0.25042562260191803
-For cluster size = 4, the silhouette score is 0.27037835821642353
-For cluster size = 5, the silhouette score is 0.2810535622082644
-For cluster size = 6, the silhouette score is 0.3018595630335999
-For cluster size = 7, the silhouette score is 0.299916182117888
-For cluster size = 8, the silhouette score is 0.30263441504036825
+For cluster size = 2, the silhouette score is 0.2458697281139218
+For cluster size = 3, the silhouette score is 0.24817175658550733
+For cluster size = 4, the silhouette score is 0.27162201236850425
+For cluster size = 5, the silhouette score is 0.2818675301801122
+For cluster size = 6, the silhouette score is 0.3023566314697015
+For cluster size = 7, the silhouette score is 0.3007331451905604
+For cluster size = 8, the silhouette score is 0.3034281082550997
 """    
 plt.figure(figsize = (10,6))
 plt.plot(range(2, 9), silh_avg_scores_rfmK, marker = 'o')
@@ -384,17 +308,15 @@ plt.title('Avg Silhouette Scores for Various Cluster Sizes')
 plt.xlabel('Cluster Size')
 plt.ylabel('Score')
 plt.show()
-# The silhouette score implies that a cluster size of 6 offers a fair clustering in comparison with the other sizes
-# Using the elbow method, either a cluster size of 5 or 6 can be chosen
-# To compromise between the two suggestions, 6 was chosen in this scenario as well.
 
-# Identify Clusters
-model2 = KMeans(n_clusters = 6, random_state = 808).fit(rfm_w_scores.iloc[:, 3:])
-centers_rfmK = model2.cluster_centers_
-labels_rfmK = model2.labels_
-rfm_w_rfm_kclusters = rfm_outliers_rem.copy()
+# Identify Clusters (experiment with 5 and 6)
+kmeans2 = KMeans(n_clusters = 6, random_state = 808).fit(rfm_w_scores.iloc[:, 3:])
+centers_rfmK = kmeans2.cluster_centers_
+labels_rfmK = kmeans2.labels_
+rfm_w_rfm_kclusters = rfm_only.copy()
 
-rfm_w_rfm_kclusters['cluster'] = labels_rfmK
+#rfm_w_rfm_kclusters['cluster'] = labels_rfmK
+rfm_w_rfm_kclusters = rfm_w_rfm_kclusters.assign(cluster = labels_rfmK)
 melted_rfm_kclusters = pd.melt(rfm_w_rfm_kclusters.reset_index(),
                               id_vars = ['cust_id', 'cluster'],
                               value_vars = ['recency', 'frequency', 'monetary'],
@@ -403,8 +325,28 @@ melted_rfm_kclusters = pd.melt(rfm_w_rfm_kclusters.reset_index(),
 sns.lineplot(data = melted_rfm_kclusters, x = 'Measure', y = 'Value', hue = 'cluster')
 plt.legend(title = 'Clusters')
 
+# create flattened graph
+rfm_w_rfm_kclusters = rfm_w_rfm_kclusters.rename(str, axis = "columns")
+model2_tsne = TSNE(random_state = 808)
+model2_transf = model2_tsne.fit_transform(rfm_w_rfm_kclusters)
+plt.title('Flattened Graph of {} Clusters'.format(6))
+sns.scatterplot(x = model2_transf[:,0], y = model2_transf[:,1], hue = labels_rfmK, style = labels_rfmK, palette = "Set1")
+
 stat_summary_2 = rfm_w_rfm_kclusters.groupby('cluster').agg({
     'recency': ['mean', 'min', 'max'],
     'frequency': ['mean', 'min', 'max'],
     'monetary': ['mean', 'min', 'max', 'count']})
 
+"""
+K = 6
+	recency                     frequency                    monetary	
+	mean	            min	max	mean                min max  mean	            min     max         count 
+cluster																			
+0	366.7488984230056	181	696	1.1363636363636365	1	2	 67.83307108070501	10.07	128.31      17248
+1	127.85308719669953	1	271	1.7388993776658974	1	2	 51.18797077127474	9.59	85.27       14301
+2	352.1508620689655	181	695	1.2698832035595107	1	2	 314.347650166852	128.44	13664.08	14384
+3	371.69853077924495	181	696	2.0	                2	2	 124.30396317649247	11.62	4950.34     16131
+4	114.36326574401888	1	271	1.0619568715803025	1	2	 162.4280871151164	11.56	4681.78     18642
+5	118.57083042568038	1	271	1.899448074605088	1	2	 251.49721753473324	85.36	7274.88     15763
+
+"""

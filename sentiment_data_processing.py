@@ -19,7 +19,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import nltk
-from collections import defaultdict 
 
 def viz_wordcloud(df, col):
     port_stopwords = nltk.corpus.stopwords.words('portuguese')
@@ -101,8 +100,13 @@ def regex_whitespace(df_list, sub = ' '):
 
 def split_data(data):
     test_dataset_size = int(0.1*data.shape[0])
-    train_dataset, test = train_test_split(data, test_size=test_dataset_size, random_state=808, stratify=data['review_sentiment'])
-    train, validation = train_test_split(train_dataset, test_size=test_dataset_size, random_state=808, stratify=train_dataset['review_sentiment'])
+    train_dataset, test = train_test_split(data, test_size=test_dataset_size,
+                                           random_state=808, 
+                                           stratify=data['review_sentiment'])
+    train, validation = train_test_split(train_dataset, 
+                                         test_size=test_dataset_size, 
+                                         random_state=808, 
+                                         stratify=train_dataset['review_sentiment'])
     
     return train, validation, test
 
@@ -112,13 +116,27 @@ def create_tokenized_data(tokenizer, split_data_list):
     validation_df.to_csv('validation_df_split.csv', encoding = 'utf_8_sig')
     test_df.to_csv('test_df_split.csv', encoding = 'utf_8_sig')
     
-    tokenized_dataset = datasets.load_dataset('csv', data_files={'train': 'train_df_split.csv',
-                                                       'validation':'validation_df_split.csv',
-                                                       'test': 'test_df_split.csv'})
-    tokenized_dataset = tokenized_dataset.map(lambda example: {'pretok_text': re.sub(r':[\)\(]+', '', str(example['review_message']))}, batched=False)
-    tokenized_dataset = tokenized_dataset.map(lambda examples: tokenizer(examples['pretok_text']), batched=True)
-    tokenized_dataset = tokenized_dataset.map(lambda example: {'labels': 1 if example['review_sentiment'] == 'Positive' else 0}, batched=False)
-    tokenized_dataset.set_format(type='torch', columns=['input_ids', 'token_type_ids', 'attention_mask', 'labels'])
+    tokenized_dataset = datasets.load_dataset(
+        'csv', 
+        data_files={'train': 'train_df_split.csv',
+                    'validation':'validation_df_split.csv',
+                    'test': 'test_df_split.csv'})
+    tokenized_dataset = tokenized_dataset.map(
+        lambda example: {'pretok_text': re.sub(r':[\)\(]+',
+                                               '',
+                                               str(example['review_message']))},
+        batched=False)
+    tokenized_dataset = tokenized_dataset.map(
+        lambda examples: tokenizer(examples['pretok_text']), 
+        batched=True)
+    tokenized_dataset = tokenized_dataset.map(
+        lambda example: {'labels': 1 if example['review_sentiment'] == 'Positive' else 0}, 
+        batched=False)
+    tokenized_dataset.set_format(type='torch', 
+                                 columns=['input_ids', 
+                                          'token_type_ids', 
+                                          'attention_mask', 
+                                          'labels'])
     
     return tokenized_dataset
 
@@ -128,7 +146,9 @@ def create_tokenized_data(tokenizer, split_data_list):
 --------------------------------------------
 """
 def evaluate_metrics(predictions, labels):
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, predictions, average='binary')
+    precision, recall, f1, _ = precision_recall_fscore_support(labels, 
+                                                               predictions, 
+                                                               average='binary')
     acc = accuracy_score(labels, predictions)
     return {
         'accuracy': acc,
@@ -165,9 +185,12 @@ def eval_preds(bert_model, validation_data_loader, torch_device):
     return np.concatenate(predictions), np.concatenate(labels)
 
 def viz_conf_matrix(confusion_matrix_dataframe):
-    heat_map = sns.heatmap(confusion_matrix_dataframe, annot=True, fmt="d", cmap="crest", linewidth = 0.5)
-    heat_map.yaxis.set_ticklabels(heat_map.yaxis.get_ticklabels(), rotation=0, ha='right')
-    heat_map.xaxis.set_ticklabels(heat_map.xaxis.get_ticklabels(), rotation=0, ha='right')
+    heat_map = sns.heatmap(confusion_matrix_dataframe, annot=True, fmt="d", 
+                           cmap="crest", linewidth = 0.5)
+    heat_map.yaxis.set_ticklabels(heat_map.yaxis.get_ticklabels(), 
+                                  rotation=0, ha='right')
+    heat_map.xaxis.set_ticklabels(heat_map.xaxis.get_ticklabels(), 
+                                  rotation=0, ha='right')
     plt.ylabel('Actual')
     plt.xlabel('Predicted')
 

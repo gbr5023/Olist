@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 import re
 import torch
 import nltk
-import pprint
 
 # if the console cannot find this file, please execute the file once
 from postgresql_connection import db_connect
@@ -50,15 +49,15 @@ from transformers import (AdamW, BertForSequenceClassification, BertTokenizer,
 
 connection = db_connect()
 
-customer = pd.read_sql_table('customer', connection)
-geolocation = pd.read_sql_table('geolocation', connection)
-geolocation_state = pd.read_sql_table('geolocation_state', connection)
-order_item = pd.read_sql_table('order_item', connection)
-orders = pd.read_sql_table('orders', connection)
-product = pd.read_sql_table('product', connection)
-product_category = pd.read_sql_table('product_category', connection)
+#customer = pd.read_sql_table('customer', connection)
+#geolocation = pd.read_sql_table('geolocation', connection)
+#geolocation_state = pd.read_sql_table('geolocation_state', connection)
+#order_item = pd.read_sql_table('order_item', connection)
+#orders = pd.read_sql_table('orders', connection)
+#product = pd.read_sql_table('product', connection)
+#product_category = pd.read_sql_table('product_category', connection)
 review = pd.read_sql_table('review', connection)
-seller = pd.read_sql_table('seller', connection)
+#seller = pd.read_sql_table('seller', connection)
 
 
 """
@@ -76,21 +75,26 @@ torch.manual_seed(rand_seed)
 -- EDA --
 -------------------------------------------------------------------------------
 """
-review['review_score'] = review['review_score'].astype('int64').astype('category')
+# update data type of the review score field
+review['review_score'] = review['review_score'].astype('int64').astype('category') 
 
+# plot counts by score
 fig_scores = sns.countplot(data = review, x="review_score", palette="Set2")
 plt.xlabel("Review Score")
 plt.title("Review Counts by Score")
 plt.show(fig_scores)
 
+# create new field sentiment for scores 3+ to positive sentiment, and <3 to negative sentiment
 review['review_sentiment'] = review.review_score.apply(conv_to_sentiment)
 
+# plot counts by sentiment
 sentiment_classes = ['positive', 'negative']
 fig_sentiment = sns.countplot(data = review, x="review_sentiment", palette="Set2").set_xticklabels(sentiment_classes)
 plt.xlabel("Review Sentiment")
 plt.title("Review Counts by Sentiment Type")
 plt.show(fig_sentiment)
 
+# remove reviews with Not Defined in the review message
 review_new = review[review.review_message != 'Not Defined']
 
 # visualize word cloud of positive and negative reviews
@@ -98,6 +102,7 @@ positive_wc_dict, positive_wc = viz_wordcloud(review_new.loc[review_new['review_
               "review_message")
 negative_wc_dict, negative_wc = viz_wordcloud(review_new.loc[review_new['review_sentiment'] == 'Negative'], 
               "review_message")
+ 
 # visualize review score = 3 (neutral for interpreting results)
 neutral_wc_dict, neutral_wc = viz_wordcloud(review_new.loc[review_new['review_score'] == 3], 
               "review_message")
@@ -115,12 +120,38 @@ neutral_freq_dict = zip_wordcounts_relative_freq(neutral_keys_top20,
                                               neutral_items_top20_word,
                                               neutral_items_top20_rel)
 print_word_rel_freq(neutral_freq_dict, "Neutral")
+"""
+Top 20 Neutral Words:
+* Each word is followed by its word and relative frequency *
+
+produto:	(1677, 1.0)
+veio:       (540, 0.3220035778175313)
+recebi:     (512, 0.3053070960047704)
+entrega:    (478, 0.28503279666070364)
+prazo:      (469, 0.2796660703637448)
+bom:        (378, 0.22540250447227192)
+chegou:     (349, 0.2081097197376267)
+entregue:	(298, 0.17769827072152652)
+comprei:	(287, 0.17113893858079904)
+ainda:      (260, 0.15503875968992248)
+porém:      (257, 0.15324985092426952)
+bem:        (206, 0.12283840190816935)
+correio:	(198, 0.11806797853309481)
+dia:        (190, 0.11329755515802027)
+compra:     (184, 0.10971973762671437)
+loja:       (182, 0.10852713178294573)
+qualidade:	(175, 0.10435301132975551)
+nao:        (175, 0.10435301132975551)
+gostei:     (169, 0.10077519379844961)
+ante:       (152, 0.09063804412641623)
+"""
 
 """
 -------------------------------------------------------------------------------
 -- Sentiment Analysis - Data Preprocessing --
 -------------------------------------------------------------------------------
 """
+# regex data preprocessing
 review_new['review_message'] = regex_linebreaks(review_new['review_message'])
 review_new['review_message'] = regex_hyperlinks(review_new['review_message'])
 review_new['review_message'] = regex_dates(review_new['review_message'])
@@ -130,6 +161,23 @@ review_new['review_message'] = regex_special_chars(review_new['review_message'])
 review_new['review_message'] = regex_whitespace(review_new['review_message'])
 
 review_new.info()
+"""
+<class 'pandas.core.frame.DataFrame'>
+Index: 39094 entries, 0 to 43062
+Data columns (total 8 columns):
+ #   Column               Non-Null Count  Dtype         
+---  ------               --------------  -----         
+ 0   review_id            39094 non-null  object        
+ 1   order_id             39094 non-null  object        
+ 2   review_score         39094 non-null  category      
+ 3   review_title         39094 non-null  object        
+ 4   review_message       39094 non-null  object        
+ 5   review_dtm           39094 non-null  datetime64[ns]
+ 6   review_response_dtm  39094 non-null  datetime64[ns]
+ 7   review_sentiment     39094 non-null  object        
+dtypes: category(1), datetime64[ns](2), object(5)
+memory usage: 2.4+ MB
+"""
 sentiment_type = review_new.review_sentiment.value_counts()
 sentiment_type
 """
@@ -139,20 +187,9 @@ Negative     9283
 Name: count, dtype: int64
 """
 
+# create tokenizer for preparing model inputs using the base architecture that 
+# BERT has been trained on with Portuguese language support
 bert_tokenizer = BertTokenizer.from_pretrained('neuralmind/bert-base-portuguese-cased')
-
-# Store length of each review 
-review_token_len = []
-
-# loop through reviews to get tokenized length
-for rvw in review_new.review_message:
-    tokens = bert_tokenizer.encode(rvw, max_length=512)
-    review_token_len.append(len(tokens))
-
-# rework this code
-sns.histplot(review_token_len)
-plt.xlim([0, 215]);
-plt.xlabel('Review Tokenized Length')
 
 
 """
@@ -270,6 +307,7 @@ transpose_sentiments = ['negative', 'positive']
 print(classification_report(test_labels, test_predictions, 
                             target_names=transpose_sentiments))
 """
+1 MIN 30 SEC for EPOCH 0
               precision    recall  f1-score   support
 
     negative       0.74      0.87      0.80       928
@@ -279,7 +317,7 @@ print(classification_report(test_labels, test_predictions,
    macro avg       0.85      0.89      0.87      3909
 weighted avg       0.91      0.90      0.90      3909
 
-VS 2 EPOCHS - Slight improvement
+VS 2 EPOCHS - Slight improvement (1 hr)
 
               precision    recall  f1-score   support
 
